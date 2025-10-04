@@ -21,27 +21,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { Clear } from '@mui/icons-material';
-
-// Schema for advocate
-type Advocate = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  city: string;
-  degree: string;
-  specialties: string[];
-  yearsOfExperience: number;
-  phoneNumber: number;
-  createdAt?: string;
-};
-
-// Schema for pagination info
-type PaginationInfo = {
-  limit: number;
-  offset: number;
-  total: number;
-  hasMore: boolean;
-};
+import { Advocate, PaginationInfo, ApiResponse } from '@/types';
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -83,7 +63,7 @@ export default function Home() {
     
     try {
       const response = await fetch(`/api/advocates?limit=${limit}&offset=${offset}`);
-      const jsonResponse = await response.json();
+      const jsonResponse: ApiResponse<Advocate> = await response.json();
       setAdvocates(jsonResponse.data);
       setFilteredAdvocates(jsonResponse.data);
       setPagination(jsonResponse.pagination);

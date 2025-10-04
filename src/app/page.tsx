@@ -16,7 +16,9 @@ import {
   Button,
   Box,
   Chip,
-  Stack
+  Stack,
+  Pagination,
+  CircularProgress
 } from '@mui/material';
 import { Clear } from '@mui/icons-material';
 
@@ -31,6 +33,14 @@ type Advocate = {
   yearsOfExperience: number;
   phoneNumber: number;
   createdAt?: string;
+};
+
+// Schema for pagination info
+type PaginationInfo = {
+  limit: number;
+  offset: number;
+  total: number;
+  hasMore: boolean;
 };
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -57,16 +67,41 @@ export default function Home() {
   const [advocates, setAdvocates] = useState<Advocate[]>([]);
   const [filteredAdvocates, setFilteredAdvocates] = useState<Advocate[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [pagination, setPagination] = useState<PaginationInfo>({ 
+    limit: 10, 
+    offset: 0, 
+    total: 0, 
+    hasMore: false 
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  const fetchAdvocates = async (page: number = 1, limit: number = 10) => {
+    setLoading(true);
+    const offset = (page - 1) * limit;
+    console.log(`Fetching advocates... page ${page}, limit ${limit}, offset ${offset}`);
+    
+    try {
+      const response = await fetch(`/api/advocates?limit=${limit}&offset=${offset}`);
+      const jsonResponse = await response.json();
+      setAdvocates(jsonResponse.data);
+      setFilteredAdvocates(jsonResponse.data);
+      setPagination(jsonResponse.pagination);
+    } catch (error) {
+      console.error("Error fetching advocates:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    console.log("fetching advocates...");
-    fetch("/api/advocates").then((response) => {
-      response.json().then((jsonResponse) => {
-        setAdvocates(jsonResponse.data);
-        setFilteredAdvocates(jsonResponse.data);
-      });
-    });
-  }, []);
+    fetchAdvocates(currentPage, 10); // Use fixed limit for now
+  }, [currentPage]);
+
+  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
+    setCurrentPage(page);
+    setSearchTerm(""); // Clear search when changing pages
+  };
 
   const onChange = (e: { target: { value: any; }; }) => {
     const searchedTerm = e.target.value;
@@ -93,6 +128,8 @@ export default function Home() {
     setSearchTerm("");
     setFilteredAdvocates(advocates);
   };
+
+  const totalPages = Math.ceil(pagination.total / pagination.limit);
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -127,48 +164,70 @@ export default function Home() {
         </Typography>
       )}
 
-      <TableContainer component={Paper} sx={{ mt: 2 }}>
-        <Table sx={{ minWidth: 700 }} aria-label="advocates table">
-          <TableHead>
-            <TableRow>
-              <StyledTableCell>First Name</StyledTableCell>
-              <StyledTableCell>Last Name</StyledTableCell>
-              <StyledTableCell>City</StyledTableCell>
-              <StyledTableCell>Degree</StyledTableCell>
-              <StyledTableCell>Specialties</StyledTableCell>
-              <StyledTableCell align="right">Years of Experience</StyledTableCell>
-              <StyledTableCell align="right">Phone Number</StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredAdvocates.map((advocate) => (
-              <StyledTableRow key={advocate.id}>
-                <StyledTableCell component="th" scope="row">
-                  {advocate.firstName}
-                </StyledTableCell>
-                <StyledTableCell>{advocate.lastName}</StyledTableCell>
-                <StyledTableCell>{advocate.city}</StyledTableCell>
-                <StyledTableCell>{advocate.degree}</StyledTableCell>
-                <StyledTableCell>
-                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                    {advocate.specialties.map((specialty, index) => (
-                      <Chip
-                        key={index}
-                        label={specialty}
-                        size="small"
-                        variant="outlined"
-                        sx={{ mb: 0.5 }}
-                      />
-                    ))}
-                  </Stack>
-                </StyledTableCell>
-                <StyledTableCell align="right">{advocate.yearsOfExperience}</StyledTableCell>
-                <StyledTableCell align="right">{advocate.phoneNumber}</StyledTableCell>
-              </StyledTableRow>
-            ))}
-          </TableBody>
-        </Table>
+            <TableContainer component={Paper} sx={{ mt: 2 }}>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Table sx={{ minWidth: 700 }} aria-label="advocates table">
+            <TableHead>
+              <TableRow>
+                <StyledTableCell>First Name</StyledTableCell>
+                <StyledTableCell>Last Name</StyledTableCell>
+                <StyledTableCell>City</StyledTableCell>
+                <StyledTableCell>Degree</StyledTableCell>
+                <StyledTableCell>Specialties</StyledTableCell>
+                <StyledTableCell align="right">Years of Experience</StyledTableCell>
+                <StyledTableCell align="right">Phone Number</StyledTableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredAdvocates.map((advocate) => (
+                <StyledTableRow key={advocate.id}>
+                  <StyledTableCell component="th" scope="row">
+                    {advocate.firstName}
+                  </StyledTableCell>
+                  <StyledTableCell>{advocate.lastName}</StyledTableCell>
+                  <StyledTableCell>{advocate.city}</StyledTableCell>
+                  <StyledTableCell>{advocate.degree}</StyledTableCell>
+                  <StyledTableCell>
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                      {advocate.specialties.map((specialty, index) => (
+                        <Chip
+                          key={index}
+                          label={specialty}
+                          size="small"
+                          variant="outlined"
+                          sx={{ mb: 0.5 }}
+                        />
+                      ))}
+                    </Stack>
+                  </StyledTableCell>
+                  <StyledTableCell align="right">{advocate.yearsOfExperience}</StyledTableCell>
+                  <StyledTableCell align="right">{advocate.phoneNumber}</StyledTableCell>
+                </StyledTableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </TableContainer>
+
+      {/* Pagination Controls */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          Showing {pagination.offset + 1} to {Math.min(pagination.offset + pagination.limit, pagination.total)} of {pagination.total} advocates
+        </Typography>
+        <Pagination 
+          count={totalPages}
+          page={currentPage}
+          onChange={handlePageChange}
+          color="primary"
+          showFirstButton 
+          showLastButton
+          disabled={loading}
+        />
+      </Box>
 
       {filteredAdvocates.length === 0 && advocates.length > 0 && (
         <Typography variant="body1" sx={{ mt: 2, textAlign: 'center', color: 'text.secondary' }}>

@@ -18,7 +18,7 @@ import {
   Chip,
   Stack
 } from '@mui/material';
-import { Search, Clear } from '@mui/icons-material';
+import { Clear } from '@mui/icons-material';
 
 // Schema for advocate
 type Advocate = {
